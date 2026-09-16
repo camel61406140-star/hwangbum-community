@@ -137,9 +137,11 @@ button {
   font-family: inherit;
   font-weight: 500;
   font-size: 14px;
+  color: inherit;
   cursor: pointer;
   border-radius: 4px;
   border: 1px solid transparent;
+  background: transparent;
 }
 .btn-primary {
   background: var(--accent);
