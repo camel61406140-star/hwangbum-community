@@ -1,0 +1,265 @@
+:root {
+  --bg: #f6f3ee;
+  --surface: #fffdf9;
+  --surface-2: #ede8df;
+  --text: #262220;
+  --text-dim: #756c63;
+  --border: #ddd4c6;
+  --border-strong: #c7bba7;
+  --accent: #3d5a8a;
+  --accent-text: #f4f7fc;
+  --shadow: rgba(38, 34, 32, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1a17;
+    --surface: #262320;
+    --surface-2: #302c27;
+    --text: #ece6db;
+    --text-dim: #a89d8d;
+    --border: #3e392f;
+    --border-strong: #514a3c;
+    --accent: #8fadde;
+    --accent-text: #14213a;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+  padding: 0 16px;
+}
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding-block: 40px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.masthead .eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+.masthead h1 {
+  font-family: "Gowun Batang", serif;
+  font-weight: 700;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.25;
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+.masthead .lede {
+  max-width: 62ch;
+  color: var(--text-dim);
+  line-height: 1.65;
+  margin: 0;
+}
+.masthead a {
+  color: var(--accent);
+}
+.stats {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 4px;
+}
+
+.composer, .login-box {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 0 var(--shadow);
+}
+.composer-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.composer-head label, .login-box label {
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+#nickname { width: 140px; }
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+input:focus, textarea:focus, select:focus, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+textarea { width: 100%; resize: vertical; line-height: 1.6; }
+
+.composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.status {
+  font-size: 13px;
+  color: var(--text-dim);
+  min-height: 1.2em;
+}
+button {
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 9px 18px;
+  white-space: nowrap;
+}
+.btn-primary:disabled { opacity: .55; cursor: default; }
+.btn-primary:not(:disabled):hover { filter: brightness(1.08); }
+
+.btn-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 7px 14px;
+  font-size: 13px;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-secondary:disabled { opacity: .5; cursor: default; }
+
+.catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.empty-note {
+  grid-column: 1 / -1;
+  color: var(--text-dim);
+  font-size: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.drawer {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.drawer.pending { border-style: dashed; }
+.drawer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.drawer-head h2 {
+  font-family: "Gowun Batang", serif;
+  font-size: 16.5px;
+  font-weight: 700;
+  margin: 0;
+}
+.drawer-head .count {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.cards { list-style: none; margin: 0; padding: 0; }
+.card { border-bottom: 1px solid var(--border); }
+.card:last-child { border-bottom: none; }
+.card-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 12px 14px;
+}
+.card-toggle:hover { background: var(--surface-2); }
+.card-text { margin: 0 0 6px; line-height: 1.55; font-size: 14.5px; }
+.card-meta {
+  margin: 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 6px;
+}
+
+.thread {
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.thread[hidden] { display: none; }
+.replies { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.reply { border-left: 2px solid var(--border-strong); padding-left: 10px; }
+.reply p { margin: 0 0 3px; font-size: 13.5px; line-height: 1.5; }
+.reply .card-meta { margin: 0; }
+.no-reply { font-size: 12.5px; color: var(--text-dim); }
+
+.reply-form { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; border-top: 1px dashed var(--border-strong); }
+.reply-form .row { display: flex; gap: 8px; }
+.reply-nick { width: 120px; }
+.reply-text { flex: 1; resize: vertical; line-height: 1.5; font-size: 13.5px; }
+.reply-submit { align-self: flex-end; }
+
+/* admin-only bits */
+.assign-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 14px 12px;
+  flex-wrap: wrap;
+}
+.assign-row select { flex: 1; min-width: 140px; }
+.assign-row input { flex: 1; min-width: 140px; }
+nav.top-links {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+nav.top-links a { color: var(--text-dim); }

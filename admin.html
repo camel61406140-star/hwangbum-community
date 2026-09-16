@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>질문 카드함 — 관리자</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">Admin</p>
+    <h1>정리되지 않은 질문 분류하기</h1>
+    <p class="lede">방문자가 남긴 질문을 기존 카테고리에 배정하거나 새 카테고리를 만들어 정리해요.</p>
+    <nav class="top-links"><a href="index.html">← 공개 페이지로</a></nav>
+  </header>
+
+  <div id="configBanner" class="banner" hidden></div>
+
+  <section class="login-box" id="loginBox" aria-label="로그인">
+    <label for="email">이메일</label>
+    <input id="email" type="email" placeholder="you@example.com" />
+    <label for="password">비밀번호</label>
+    <input id="password" type="password" />
+    <div class="composer-foot">
+      <span id="loginStatus" class="status" aria-live="polite"></span>
+      <button id="loginBtn" class="btn-primary" type="button">로그인</button>
+    </div>
+  </section>
+
+  <section id="adminArea" hidden>
+    <div class="composer-foot" style="margin-bottom:16px;">
+      <span id="whoami" class="status"></span>
+      <button id="logoutBtn" class="btn-secondary" type="button">로그아웃</button>
+    </div>
+    <section class="catalog" id="pending" aria-label="정리 전 질문"></section>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

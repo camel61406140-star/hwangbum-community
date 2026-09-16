@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>질문 카드함</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">Question Catalog</p>
+    <h1>다들 궁금한 거, 한곳에 모아요</h1>
+    <p class="lede">질문을 남기면 서랍(카테고리)에 정리돼서 쌓여요. 서랍 안 질문을 누르면 바로 아래에 답변을 달 수 있어요.</p>
+    <p class="stats" id="stats"></p>
+    <nav class="top-links"><a href="admin.html">관리자 페이지 →</a></nav>
+  </header>
+
+  <div id="configBanner" class="banner" hidden></div>
+
+  <section class="composer" aria-label="질문 작성">
+    <div class="composer-head">
+      <label for="nickname">닉네임</label>
+      <input id="nickname" type="text" maxlength="20" placeholder="익명" />
+    </div>
+    <textarea id="questionText" maxlength="500" placeholder="궁금한 걸 적어보세요… (Ctrl/Cmd+Enter로 등록)" rows="3"></textarea>
+    <div class="composer-foot">
+      <span id="composerStatus" class="status" aria-live="polite"></span>
+      <button id="submitQuestion" class="btn-primary" type="button">질문 올리기</button>
+    </div>
+  </section>
+
+  <section class="catalog" id="catalog" aria-label="카테고리별 질문">
+    <p class="empty-note" id="emptyNote">아직 등록된 질문이 없어요. 첫 질문을 남겨보세요.</p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
