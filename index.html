@@ -9,7 +9,22 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="page">
+<div class="page" id="gateArea">
+  <header class="masthead">
+    <p class="eyebrow">Question Catalog</p>
+    <h1>다들 궁금한 거, 한곳에 모아요</h1>
+  </header>
+  <section class="login-box" aria-label="입장 비밀번호">
+    <label for="visitorPw">비밀번호</label>
+    <input id="visitorPw" type="password" placeholder="비밀번호를 입력하세요" />
+    <div class="composer-foot">
+      <span id="gateStatus" class="status" aria-live="polite"></span>
+      <button id="gateBtn" class="btn-primary" type="button">입장하기</button>
+    </div>
+  </section>
+</div>
+
+<div class="page" id="mainArea" hidden>
   <header class="masthead">
     <p class="eyebrow">Question Catalog</p>
     <h1>다들 궁금한 거, 한곳에 모아요</h1>

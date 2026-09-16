@@ -1,12 +1,17 @@
 (function () {
   "use strict";
 
+  var VISITOR_TOKEN_KEY = "hb_visitor_token";
+
   var categoriesState = [];  // [{id, name}]
   var questionsState = [];   // [{id, text, nickname, category_id, created_at}]
   var repliesCache = {};     // question_id -> [{id, text, nickname, created_at}]
   var expandedId = null;
   var mainTimer = null;
   var repliesTimer = null;
+  var appStarted = false;
+
+  function visitorToken() { return localStorage.getItem(VISITOR_TOKEN_KEY) || ""; }
 
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -29,6 +34,8 @@
   }
 
   function fetchJSON(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, opts.headers, { "x-visitor-token": visitorToken() });
     return fetch(url, opts).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (data) {
         if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
@@ -36,6 +43,48 @@
       });
     });
   }
+
+  // ---------- gate ----------
+
+  function showMain() {
+    document.getElementById("gateArea").hidden = true;
+    document.getElementById("mainArea").hidden = false;
+  }
+  function showGate() {
+    document.getElementById("gateArea").hidden = false;
+    document.getElementById("mainArea").hidden = true;
+  }
+
+  function verifyAndEnter(token, silent) {
+    var statusEl = document.getElementById("gateStatus");
+    if (!silent) statusEl.textContent = "확인하는 중…";
+    return fetch("/api/visitor/verify", { method: "POST", headers: { "x-visitor-token": token } })
+      .then(function (r) { return r.ok; })
+      .then(function (ok) {
+        if (ok) {
+          localStorage.setItem(VISITOR_TOKEN_KEY, token);
+          statusEl.textContent = "";
+          showMain();
+          startApp();
+        } else {
+          localStorage.removeItem(VISITOR_TOKEN_KEY);
+          showGate();
+          if (!silent) statusEl.textContent = "비밀번호가 올바르지 않아요.";
+        }
+      })
+      .catch(function () {
+        if (!silent) statusEl.textContent = "확인 중 오류가 발생했어요. 다시 시도해 주세요.";
+      });
+  }
+
+  document.getElementById("gateBtn").addEventListener("click", function () {
+    var pw = document.getElementById("visitorPw").value.trim();
+    if (!pw) return;
+    verifyAndEnter(pw, false);
+  });
+  document.getElementById("visitorPw").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("gateBtn").click();
+  });
 
   // ---------- rendering ----------
 
@@ -249,17 +298,29 @@
 
   // ---------- boot ----------
 
-  loadAll();
-  mainTimer = setInterval(loadAll, 5000);
+  function startApp() {
+    if (appStarted) return;
+    appStarted = true;
 
-  document.addEventListener("visibilitychange", function () {
-    if (document.hidden) {
-      if (mainTimer) { clearInterval(mainTimer); mainTimer = null; }
-      stopRepliesPolling();
-    } else {
-      loadAll();
-      if (!mainTimer) mainTimer = setInterval(loadAll, 5000);
-      if (expandedId) startRepliesPolling(expandedId);
-    }
-  });
+    loadAll();
+    mainTimer = setInterval(loadAll, 5000);
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        if (mainTimer) { clearInterval(mainTimer); mainTimer = null; }
+        stopRepliesPolling();
+      } else {
+        loadAll();
+        if (!mainTimer) mainTimer = setInterval(loadAll, 5000);
+        if (expandedId) startRepliesPolling(expandedId);
+      }
+    });
+  }
+
+  var savedToken = visitorToken();
+  if (savedToken) {
+    verifyAndEnter(savedToken, true);
+  } else {
+    showGate();
+  }
 })();

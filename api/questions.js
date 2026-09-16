@@ -1,6 +1,8 @@
 var db = require("./_db");
 
 module.exports = async function (req, res) {
+  if (!db.requireVisitor(req, res)) return;
+
   if (req.method === "GET") {
     try {
       var result = await db.sql`SELECT id, text, nickname, category_id, created_at FROM questions ORDER BY created_at DESC LIMIT 300`;

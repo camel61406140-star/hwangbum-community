@@ -98,8 +98,8 @@
 
   function loadAll() {
     return Promise.all([
-      fetch("/api/categories").then(function (r) { return r.json(); }),
-      fetch("/api/questions").then(function (r) { return r.json(); })
+      authFetch("/api/categories"),
+      authFetch("/api/questions")
     ]).then(function (results) {
       categoriesState = Array.isArray(results[0]) ? results[0] : [];
       var questions = Array.isArray(results[1]) ? results[1] : [];

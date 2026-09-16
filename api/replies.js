@@ -1,6 +1,8 @@
 var db = require("./_db");
 
 module.exports = async function (req, res) {
+  if (!db.requireVisitor(req, res)) return;
+
   if (req.method === "GET") {
     var questionId = req.query && req.query.question_id;
     if (!questionId) {

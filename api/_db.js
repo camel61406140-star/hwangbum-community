@@ -20,4 +20,25 @@ function requireAdmin(req, res) {
   return true;
 }
 
-module.exports = { sql: sql, checkAdmin: checkAdmin, requireAdmin: requireAdmin };
+// 방문자 비밀번호 — 관리자 토큰을 알고 있어도 통과되게 해서(관리자는 항상 접근 가능) 이중 로그인 안 해도 되게 함
+function checkVisitor(req) {
+  if (checkAdmin(req)) return true;
+  var token = req.headers["x-visitor-token"];
+  return !!process.env.VISITOR_TOKEN && token === process.env.VISITOR_TOKEN;
+}
+
+function requireVisitor(req, res) {
+  if (!checkVisitor(req)) {
+    res.status(401).json({ error: "unauthorized" });
+    return false;
+  }
+  return true;
+}
+
+module.exports = {
+  sql: sql,
+  checkAdmin: checkAdmin,
+  requireAdmin: requireAdmin,
+  checkVisitor: checkVisitor,
+  requireVisitor: requireVisitor
+};
