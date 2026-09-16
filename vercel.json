@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/admin/bulk_import.js": { "maxDuration": 60 }
+  }
+}
