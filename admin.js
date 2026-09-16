@@ -1,17 +1,10 @@
 (function () {
   "use strict";
 
-  if (!window.SUPABASE_URL || window.SUPABASE_URL.indexOf("YOUR-PROJECT") !== -1) {
-    var banner = document.getElementById("configBanner");
-    banner.hidden = false;
-    banner.textContent = "config.js에 Supabase URL/키를 아직 안 넣으셨어요. README를 참고해 설정해주세요.";
-    return;
-  }
-
-  var sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-
-  var categoriesState = []; // [{id, name}]
-  var pendingState = [];    // [{id, text, nickname, created_at}]
+  var TOKEN_KEY = "hb_admin_token";
+  var categoriesState = [];
+  var pendingState = [];
+  var pollTimer = null;
 
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -31,56 +24,88 @@
     return d + "일 전";
   }
 
+  function adminToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
+
+  function authFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, opts.headers, {
+      "x-admin-token": adminToken(),
+      "Content-Type": "application/json"
+    });
+    return fetch(url, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) {
+          var err = new Error(data.error || ("HTTP " + r.status));
+          err.status = r.status;
+          throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function showLoggedIn(loggedIn) {
+    document.getElementById("loginBox").hidden = loggedIn;
+    document.getElementById("adminArea").hidden = !loggedIn;
+  }
+
   // ---------- auth ----------
 
-  function setLoggedIn(user) {
-    document.getElementById("loginBox").hidden = !!user;
-    document.getElementById("adminArea").hidden = !user;
-    if (user) {
-      document.getElementById("whoami").textContent = user.email + "로 로그인됨";
+  function attemptLogin(token) {
+    var statusEl = document.getElementById("loginStatus");
+    localStorage.setItem(TOKEN_KEY, token);
+    statusEl.textContent = "확인하는 중…";
+    return authFetch("/api/admin/verify", { method: "POST" }).then(function () {
+      statusEl.textContent = "";
+      showLoggedIn(true);
       loadAll();
-      subscribeRealtime();
-    }
+      if (!pollTimer) pollTimer = setInterval(loadAll, 5000);
+    }).catch(function () {
+      statusEl.textContent = "토큰이 올바르지 않아요.";
+      localStorage.removeItem(TOKEN_KEY);
+      showLoggedIn(false);
+    });
   }
 
   document.getElementById("loginBtn").addEventListener("click", function () {
-    var email = document.getElementById("email").value.trim();
-    var password = document.getElementById("password").value;
-    var statusEl = document.getElementById("loginStatus");
-    statusEl.textContent = "로그인하는 중…";
-    sb.auth.signInWithPassword({ email: email, password: password }).then(function (res) {
-      if (res.error) { statusEl.textContent = "로그인 실패: " + res.error.message; return; }
-      statusEl.textContent = "";
-      setLoggedIn(res.data.user);
-    });
+    var token = document.getElementById("adminTokenInput").value.trim();
+    if (!token) return;
+    attemptLogin(token);
+  });
+
+  document.getElementById("adminTokenInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("loginBtn").click();
   });
 
   document.getElementById("logoutBtn").addEventListener("click", function () {
-    sb.auth.signOut().then(function () { setLoggedIn(null); });
+    localStorage.removeItem(TOKEN_KEY);
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    showLoggedIn(false);
   });
 
-  sb.auth.getSession().then(function (res) {
-    setLoggedIn(res.data.session ? res.data.session.user : null);
+  document.getElementById("initBtn").addEventListener("click", function () {
+    var statusEl = document.getElementById("initStatus");
+    statusEl.textContent = "초기화하는 중…";
+    authFetch("/api/admin/init", { method: "POST" }).then(function () {
+      statusEl.textContent = "완료! 테이블이 준비됐어요.";
+      loadAll();
+    }).catch(function (e) {
+      statusEl.textContent = "실패: " + e.message;
+    });
   });
 
   // ---------- data ----------
 
   function loadAll() {
-    Promise.all([
-      sb.from("categories").select("*").order("created_at", { ascending: true }),
-      sb.from("questions").select("*").is("category_id", null).order("created_at", { ascending: false }).limit(200)
+    return Promise.all([
+      fetch("/api/categories").then(function (r) { return r.json(); }),
+      fetch("/api/questions").then(function (r) { return r.json(); })
     ]).then(function (results) {
-      categoriesState = results[0].data || [];
-      pendingState = results[1].data || [];
+      categoriesState = Array.isArray(results[0]) ? results[0] : [];
+      var questions = Array.isArray(results[1]) ? results[1] : [];
+      pendingState = questions.filter(function (q) { return !q.category_id; });
       render();
-    });
-  }
-
-  function subscribeRealtime() {
-    sb.channel("admin-catalog")
-      .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, loadAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "questions" }, loadAll)
-      .subscribe();
+    }).catch(function () { /* 다음 폴링에서 회복 */ });
   }
 
   function render() {
@@ -134,27 +159,25 @@
     var newInput = document.querySelector('.new-cat-name[data-id="' + id + '"]');
     var choice = select.value;
 
+    if (!choice) { select.focus(); return; }
+    if (choice === "__new__" && !newInput.value.trim()) { newInput.focus(); return; }
+
     btn.disabled = true;
+    var payload = choice === "__new__"
+      ? { question_id: id, new_category_name: newInput.value.trim() }
+      : { question_id: id, category_id: choice };
 
-    function assign(categoryId) {
-      sb.from("questions").update({ category_id: categoryId }).eq("id", id).then(function (res) {
-        btn.disabled = false;
-        if (res.error) alert("지정 실패: " + res.error.message);
-      });
-    }
-
-    if (choice === "__new__") {
-      var name = newInput.value.trim();
-      if (!name) { newInput.focus(); btn.disabled = false; return; }
-      sb.from("categories").insert({ name: name.slice(0, 30) }).select().single().then(function (res) {
-        if (res.error) { alert("카테고리 생성 실패: " + res.error.message); btn.disabled = false; return; }
-        assign(res.data.id);
-      });
-    } else if (choice) {
-      assign(choice);
-    } else {
-      select.focus();
-      btn.disabled = false;
-    }
+    authFetch("/api/admin/assign", { method: "POST", body: JSON.stringify(payload) })
+      .then(function () { return loadAll(); })
+      .catch(function (e) { alert("지정 실패: " + e.message); })
+      .finally(function () { btn.disabled = false; });
   });
+
+  // ---------- boot ----------
+
+  if (adminToken()) {
+    attemptLogin(adminToken());
+  } else {
+    showLoggedIn(false);
+  }
 })();

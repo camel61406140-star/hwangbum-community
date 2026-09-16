@@ -1,21 +1,12 @@
 (function () {
   "use strict";
 
-  if (!window.SUPABASE_URL || window.SUPABASE_URL.indexOf("YOUR-PROJECT") !== -1) {
-    var banner = document.getElementById("configBanner");
-    banner.hidden = false;
-    banner.textContent = "config.js에 Supabase URL/키를 아직 안 넣으셨어요. README를 참고해 설정해주세요.";
-    document.getElementById("submitQuestion").disabled = true;
-    return;
-  }
-
-  var sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-
   var categoriesState = [];  // [{id, name}]
   var questionsState = [];   // [{id, text, nickname, category_id, created_at}]
   var repliesCache = {};     // question_id -> [{id, text, nickname, created_at}]
   var expandedId = null;
-  var repliesChannel = null;
+  var mainTimer = null;
+  var repliesTimer = null;
 
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -37,6 +28,15 @@
     return (dt.getMonth() + 1) + "/" + dt.getDate();
   }
 
+  function fetchJSON(url, opts) {
+    return fetch(url, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+        return data;
+      });
+    });
+  }
+
   // ---------- rendering ----------
 
   function rebuildCatalog() {
@@ -52,7 +52,7 @@
     var catNameById = {};
     categoriesState.forEach(function (c) { catNameById[c.id] = c.name; });
 
-    var groups = {}; // key -> {name, pending, items:[]}
+    var groups = {};
     questionsState.forEach(function (q) {
       var key = q.category_id || "__pending__";
       if (!groups[key]) {
@@ -129,35 +129,47 @@
     }).join("");
   }
 
+  // ---------- polling ----------
+
+  function loadAll() {
+    return Promise.all([
+      fetchJSON("/api/categories"),
+      fetchJSON("/api/questions")
+    ]).then(function (results) {
+      categoriesState = results[0];
+      questionsState = results[1];
+      rebuildCatalog();
+    }).catch(function () { /* 일시적 오류는 다음 폴링에서 회복돼요 */ });
+  }
+
+  function loadReplies(id) {
+    return fetchJSON("/api/replies?question_id=" + encodeURIComponent(id)).then(function (data) {
+      repliesCache[id] = data;
+      if (expandedId === id) renderRepliesFor(id);
+    }).catch(function () { /* 다음 폴링에서 회복 */ });
+  }
+
+  function startRepliesPolling(id) {
+    loadReplies(id);
+    repliesTimer = setInterval(function () { loadReplies(id); }, 3000);
+  }
+  function stopRepliesPolling() {
+    if (repliesTimer) { clearInterval(repliesTimer); repliesTimer = null; }
+  }
+
   // ---------- interaction ----------
 
   function toggleCard(id) {
     if (expandedId === id) {
       expandedId = null;
-      if (repliesChannel) { sb.removeChannel(repliesChannel); repliesChannel = null; }
+      stopRepliesPolling();
       rebuildCatalog();
       return;
     }
-    if (repliesChannel) { sb.removeChannel(repliesChannel); repliesChannel = null; }
+    stopRepliesPolling();
     expandedId = id;
     rebuildCatalog();
-    loadAndSubscribeReplies(id);
-  }
-
-  function loadAndSubscribeReplies(id) {
-    sb.from("replies").select("*").eq("question_id", id).order("created_at", { ascending: true })
-      .then(function (res) {
-        repliesCache[id] = res.data || [];
-        if (expandedId === id) renderRepliesFor(id);
-      });
-
-    repliesChannel = sb.channel("replies-" + id)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "replies", filter: "question_id=eq." + id }, function (payload) {
-        if (!repliesCache[id]) repliesCache[id] = [];
-        repliesCache[id].push(payload.new);
-        if (expandedId === id) renderRepliesFor(id);
-      })
-      .subscribe();
+    startRepliesPolling(id);
   }
 
   function submitReply(id, cardEl) {
@@ -169,11 +181,16 @@
     var nickname = nickInput.value.trim() || "익명";
     localStorage.setItem("qc_nickname", nickname);
     btn.disabled = true;
-    sb.from("replies").insert({ question_id: id, text: text.slice(0, 300), nickname: nickname.slice(0, 20) })
-      .then(function (res) {
-        btn.disabled = false;
-        if (!res.error) textInput.value = "";
-      });
+    fetchJSON("/api/replies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question_id: id, text: text, nickname: nickname })
+    }).then(function () {
+      textInput.value = "";
+      return loadReplies(id);
+    }).catch(function () { /* 실패해도 버튼만 풀어주고 재시도 유도 */ }).finally(function () {
+      btn.disabled = false;
+    });
   }
 
   document.getElementById("catalog").addEventListener("click", function (e) {
@@ -206,14 +223,20 @@
     btn.disabled = true;
     statusEl.textContent = "등록하는 중…";
 
-    sb.from("questions").insert({ text: text.slice(0, 500), nickname: nickname.slice(0, 20) })
-      .then(function (res) {
-        btn.disabled = false;
-        if (res.error) { statusEl.textContent = "등록에 실패했어요. 다시 시도해 주세요."; return; }
-        textEl.value = "";
-        statusEl.textContent = "질문을 올렸어요. 곧 관리자가 정리해줄 거예요.";
-        setTimeout(function () { statusEl.textContent = ""; }, 3000);
-      });
+    fetchJSON("/api/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, nickname: nickname })
+    }).then(function () {
+      textEl.value = "";
+      statusEl.textContent = "질문을 올렸어요. 곧 관리자가 정리해줄 거예요.";
+      setTimeout(function () { statusEl.textContent = ""; }, 3000);
+      return loadAll();
+    }).catch(function () {
+      statusEl.textContent = "등록에 실패했어요. 다시 시도해 주세요.";
+    }).finally(function () {
+      btn.disabled = false;
+    });
   }
 
   document.getElementById("submitQuestion").addEventListener("click", submitQuestion);
@@ -226,21 +249,17 @@
 
   // ---------- boot ----------
 
-  function loadAll() {
-    Promise.all([
-      sb.from("categories").select("*").order("created_at", { ascending: true }),
-      sb.from("questions").select("*").order("created_at", { ascending: false }).limit(300)
-    ]).then(function (results) {
-      categoriesState = results[0].data || [];
-      questionsState = results[1].data || [];
-      rebuildCatalog();
-    });
-  }
-
   loadAll();
+  mainTimer = setInterval(loadAll, 5000);
 
-  sb.channel("public-catalog")
-    .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, loadAll)
-    .on("postgres_changes", { event: "*", schema: "public", table: "questions" }, loadAll)
-    .subscribe();
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      if (mainTimer) { clearInterval(mainTimer); mainTimer = null; }
+      stopRepliesPolling();
+    } else {
+      loadAll();
+      if (!mainTimer) mainTimer = setInterval(loadAll, 5000);
+      if (expandedId) startRepliesPolling(expandedId);
+    }
+  });
 })();

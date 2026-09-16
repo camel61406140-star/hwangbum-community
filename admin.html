@@ -17,13 +17,9 @@
     <nav class="top-links"><a href="index.html">← 공개 페이지로</a></nav>
   </header>
 
-  <div id="configBanner" class="banner" hidden></div>
-
-  <section class="login-box" id="loginBox" aria-label="로그인">
-    <label for="email">이메일</label>
-    <input id="email" type="email" placeholder="you@example.com" />
-    <label for="password">비밀번호</label>
-    <input id="password" type="password" />
+  <section class="login-box" id="loginBox" aria-label="관리자 로그인">
+    <label for="adminTokenInput">관리자 토큰</label>
+    <input id="adminTokenInput" type="password" placeholder="Vercel에 등록한 ADMIN_TOKEN 값" />
     <div class="composer-foot">
       <span id="loginStatus" class="status" aria-live="polite"></span>
       <button id="loginBtn" class="btn-primary" type="button">로그인</button>
@@ -32,15 +28,16 @@
 
   <section id="adminArea" hidden>
     <div class="composer-foot" style="margin-bottom:16px;">
-      <span id="whoami" class="status"></span>
-      <button id="logoutBtn" class="btn-secondary" type="button">로그아웃</button>
+      <span id="initStatus" class="status"></span>
+      <div style="display:flex; gap:8px;">
+        <button id="initBtn" class="btn-secondary" type="button">데이터베이스 초기화(최초 1회)</button>
+        <button id="logoutBtn" class="btn-secondary" type="button">로그아웃</button>
+      </div>
     </div>
     <section class="catalog" id="pending" aria-label="정리 전 질문"></section>
   </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>
